@@ -90,8 +90,8 @@ select option{background:#1a1a1e}
 .bbl-time{font-size:10px;color:rgba(255,255,255,0.5);margin-top:3px}
 .bbl-read{font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px;text-align:right}
 
-.img-bbl{border-radius:16px;overflow:hidden;max-width:260px}
-.img-bbl img{width:260px;display:block;border-radius:16px;object-fit:cover}
+.img-bbl{border-radius:16px;overflow:hidden;max-width:80px}
+.img-bbl img{width:80px;display:block;border-radius:16px;object-fit:cover}
 .img-bbl-time{font-size:10px;color:rgba(255,255,255,0.5);margin-top:3px;padding:0 2px}
 
 .input-bar{display:flex;align-items:center;gap:8px;padding:10px 14px 16px;background:rgba(0,0,0,0.2);border-top:1px solid rgba(255,255,255,0.1)}
