@@ -165,7 +165,7 @@ function render(){
 
       const img = document.createElement('img');
       img.src = m.img;
-      img.style.width = '80px';
+      img.style.width = '260px';
       img.style.display = 'block';
       img.style.borderRadius = '16px';
       img.style.objectFit = 'cover';

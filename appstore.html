@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telr AI — App Store Screenshot Maker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d0d0f;color:#fff;min-height:100vh}
+
+.topbar{display:flex;align-items:center;gap:16px;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,0.08);background:#0d0d0f;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-text{font-size:22px;font-weight:900;font-style:italic;letter-spacing:2px}
+.logo-badge{background:#fff;color:#C850C0;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px}
+.topbar-hint{font-size:13px;color:rgba(255,255,255,0.4)}
+
+.main{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 56px)}
+
+.left-panel{padding:22px 20px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.08)}
+.section-label{font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;margin-top:16px}
+.section-label:first-child{margin-top:0}
+
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px;font-weight:600}
+.field input,.field textarea{width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit}
+.field textarea{resize:vertical;min-height:70px;line-height:1.5}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,0.25)}
+
+.upload-zone{border:2px dashed rgba(255,255,255,0.15);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px}
+.upload-zone:hover,.upload-zone.has-img{border-color:rgba(255,107,157,0.5);background:rgba(255,107,157,0.05)}
+.upload-zone p{font-size:12px;color:rgba(255,255,255,0.4);margin-top:5px}
+.upload-zone span{font-size:24px}
+.upload-preview{width:100%;max-height:100px;object-fit:contain;border-radius:6px;display:none;margin-top:7px}
+
+.gradient-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.preset{height:30px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:all .2s}
+.preset:hover,.preset.active{border-color:#fff}
+
+input[type=color]{width:100%;height:34px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.07);border-radius:7px;cursor:pointer;padding:2px;margin-bottom:14px}
+input[type=range]{width:100%;accent-color:#FF6B9D}
+
+.slider-row{margin-bottom:14px}
+.slider-row label{display:block;font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:5px;font-weight:600}
+.slider-hints{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.25);margin-top:3px}
+
+.btn-dl{width:100%;background:linear-gradient(135deg,#FF6B9D,#C850C0);border:none;color:#fff;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}
+.btn-dl:hover{opacity:.9}
+
+.right-panel{display:flex;flex-direction:column;background:#111114}
+.preview-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:14px;font-weight:600;color:rgba(255,255,255,0.7)}
+.preview-hint{font-size:12px;color:rgba(255,255,255,0.3);font-weight:400}
+.preview-area{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
+
+/* PREVIEW CARD — what you see on screen */
+#preview-card{
+  width:286px;
+  height:620px;
+  border-radius:16px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:32px 18px 28px;
+  background:linear-gradient(135deg,#FF6B9D,#C850C0,#9B51E0);
+  flex-shrink:0;
+}
+.preview-headline{
+  font-size:26px;
+  font-weight:900;
+  color:#fff;
+  line-height:1.2;
+  text-align:center;
+  white-space:pre-wrap;
+  word-break:break-word;
+  width:100%;
+  flex-shrink:0;
+}
+.preview-phone{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  padding:14px 0 0;
+}
+.preview-phone img{
+  max-width:100%;
+  max-height:480px;
+  object-fit:contain;
+  display:block;
+}
+.preview-placeholder{
+  width:140px;
+  height:280px;
+  background:rgba(255,255,255,0.1);
+  border-radius:20px;
+  border:2px dashed rgba(255,255,255,0.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  color:rgba(255,255,255,0.4);
+  text-align:center;
+  padding:16px;
+}
+
+/* HIDDEN FULL RES CANVAS for download only */
+#export-canvas{
+  position:fixed;
+  left:-9999px;
+  top:0;
+  width:1242px;
+  height:2688px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:160px 80px;
+  background:linear-gradient(135deg,#FF6B9D,#C850C0,#9B51E0);
+  pointer-events:none;
+}
+.export-headline{
+  font-size:120px;
+  font-weight:900;
+  color:#fff;
+  line-height:1.15;
+  text-align:center;
+  white-space:pre-wrap;
+  word-break:break-word;
+  width:100%;
+  flex-shrink:0;
+  letter-spacing:-1px;
+}
+.export-phone{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  padding:80px 0 0;
+}
+.export-phone img{
+  max-width:100%;
+  max-height:2100px;
+  object-fit:contain;
+  display:block;
+}
+
+#loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading.show{display:flex}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,0.2);border-top-color:#FF6B9D;border-radius:50%;animation:spin 0.8s linear infinite}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <span class="logo-text">TELR</span>
+    <span class="logo-badge">AI</span>
+  </div>
+  <span class="topbar-hint">App Store Screenshot Maker — 1242×2688px</span>
+</div>
+
+<div class="main">
+  <div class="left-panel">
+
+    <p class="section-label">Mockup Image</p>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-in').click()">
+      <span>📱</span>
+      <p>Click to upload your phone mockup</p>
+      <img class="upload-preview" id="upload-preview" src="" alt="">
+    </div>
+    <input type="file" id="file-in" accept="image/*" style="display:none" onchange="handleUpload(event)">
+
+    <p class="section-label">Headline</p>
+    <div class="field">
+      <textarea id="t-headline" placeholder="Find out the truth 🚩" oninput="updatePreview()">Find out the truth 🚩</textarea>
+    </div>
+
+    <p class="section-label">Background</p>
+    <div class="gradient-presets">
+      <div class="preset active" id="p0" style="background:linear-gradient(135deg,#FF6B9D,#C850C0,#9B51E0)" onclick="setGradient(0)"></div>
+      <div class="preset" id="p1" style="background:linear-gradient(135deg,#1a1a2e,#16213e)" onclick="setGradient(1)"></div>
+      <div class="preset" id="p2" style="background:linear-gradient(135deg,#FF1744,#C850C0)" onclick="setGradient(2)"></div>
+      <div class="preset" id="p3" style="background:linear-gradient(135deg,#0f0f0f,#1a1a1a)" onclick="setGradient(3)"></div>
+      <div class="preset" id="p4" style="background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)" onclick="setGradient(4)"></div>
+      <div class="preset" id="p5" style="background:linear-gradient(135deg,#11998e,#38ef7d)" onclick="setGradient(5)"></div>
+      <div class="preset" id="p6" style="background:linear-gradient(135deg,#fc4a1a,#f7b733)" onclick="setGradient(6)"></div>
+      <div class="preset" id="p7" style="background:linear-gradient(135deg,#232526,#414345)" onclick="setGradient(7)"></div>
+    </div>
+
+    <p class="section-label">Headline Colour</p>
+    <input type="color" id="c-headline" value="#ffffff" onchange="updatePreview()">
+
+    <div class="slider-row">
+      <label>Headline size: <span id="hl-val">26</span>px (preview)</label>
+      <input type="range" min="14" max="48" value="26" id="hl-size" oninput="document.getElementById('hl-val').textContent=this.value;updatePreview()">
+    </div>
+
+    <div class="slider-row">
+      <label>Headline position</label>
+      <input type="range" min="0" max="1" step="1" value="0" id="hl-pos" oninput="updatePos(this.value)">
+      <div class="slider-hints"><span>Top</span><span>Bottom</span></div>
+    </div>
+
+    <button class="btn-dl" onclick="downloadShot()">⬇ Download 1242×2688px PNG</button>
+
+  </div>
+
+  <div class="right-panel">
+    <div class="preview-header">
+      <span>Preview</span>
+      <span class="preview-hint">1242 × 2688px when downloaded</span>
+    </div>
+    <div class="preview-area">
+      <div id="preview-card">
+        <div class="preview-headline" id="p-headline">Find out the truth 🚩</div>
+        <div class="preview-phone">
+          <div class="preview-placeholder" id="p-placeholder">Upload your mockup ↑</div>
+          <img id="p-phone" src="" alt="" style="display:none">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HIDDEN FULL RES — only used for download -->
+<div id="export-canvas">
+  <div class="export-headline" id="e-headline">Find out the truth 🚩</div>
+  <div class="export-phone">
+    <img id="e-phone" src="" alt="" style="display:none">
+  </div>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p style="font-size:14px;color:rgba(255,255,255,0.7)">Generating full resolution PNG...</p>
+</div>
+
+<script>
+const gradients = [
+  'linear-gradient(135deg,#FF6B9D,#C850C0,#9B51E0)',
+  'linear-gradient(135deg,#1a1a2e,#16213e)',
+  'linear-gradient(135deg,#FF1744,#C850C0)',
+  'linear-gradient(135deg,#0f0f0f,#1a1a1a)',
+  'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)',
+  'linear-gradient(135deg,#11998e,#38ef7d)',
+  'linear-gradient(135deg,#fc4a1a,#f7b733)',
+  'linear-gradient(135deg,#232526,#414345)',
+];
+let currentGradient = 0;
+let uploadedSrc = null;
+
+function setGradient(idx){
+  currentGradient = idx;
+  document.querySelectorAll('.preset').forEach((p,i)=>p.classList.toggle('active',i===idx));
+  document.getElementById('preview-card').style.background = gradients[idx];
+  document.getElementById('export-canvas').style.background = gradients[idx];
+}
+
+function updatePos(val){
+  const dir = val==='1' ? 'column-reverse' : 'column';
+  document.getElementById('preview-card').style.flexDirection = dir;
+  document.getElementById('export-canvas').style.flexDirection = dir;
+}
+
+function updatePreview(){
+  const txt = document.getElementById('t-headline').value;
+  const col = document.getElementById('c-headline').value;
+  const sz  = document.getElementById('hl-size').value;
+
+  document.getElementById('p-headline').textContent = txt;
+  document.getElementById('p-headline').style.color = col;
+  document.getElementById('p-headline').style.fontSize = sz + 'px';
+
+  // keep export in sync — scale up ~4.6x for full res
+  document.getElementById('e-headline').textContent = txt;
+  document.getElementById('e-headline').style.color = col;
+  document.getElementById('e-headline').style.fontSize = (sz * 4.6) + 'px';
+}
+
+function handleUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    uploadedSrc = ev.target.result;
+
+    document.getElementById('upload-preview').src = uploadedSrc;
+    document.getElementById('upload-preview').style.display = 'block';
+    document.getElementById('upload-zone').classList.add('has-img');
+
+    document.getElementById('p-phone').src = uploadedSrc;
+    document.getElementById('p-phone').style.display = 'block';
+    document.getElementById('p-placeholder').style.display = 'none';
+
+    document.getElementById('e-phone').src = uploadedSrc;
+    document.getElementById('e-phone').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function downloadShot(){
+  const loading = document.getElementById('loading');
+  loading.classList.add('show');
+
+  const exportEl = document.getElementById('export-canvas');
+  exportEl.style.left = '0';
+  exportEl.style.top = '0';
+  exportEl.style.zIndex = '-1';
+
+  setTimeout(() => {
+    html2canvas(exportEl, {
+      scale: 1,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      logging: false,
+      width: 1242,
+      height: 2688,
+    }).then(canvas => {
+      exportEl.style.left = '-9999px';
+      const link = document.createElement('a');
+      link.download = 'telr-appstore-1242x2688.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      loading.classList.remove('show');
+    }).catch(() => {
+      exportEl.style.left = '-9999px';
+      loading.classList.remove('show');
+      alert('Download failed. Try Chrome.');
+    });
+  }, 200);
+}
+
+updatePreview();
+</script>
+</body>
+</html>
