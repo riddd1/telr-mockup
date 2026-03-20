@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telr AI — Chat Screenshot Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d0d0f;color:#fff;min-height:100vh}
+
+.topbar{display:flex;align-items:center;gap:16px;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,0.08);background:#0d0d0f;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-text{font-size:22px;font-weight:900;font-style:italic;letter-spacing:2px}
+.logo-badge{background:#fff;color:#C850C0;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px}
+.topbar-hint{font-size:13px;color:rgba(255,255,255,0.4)}
+
+.main{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 56px)}
+
+.left-panel{padding:22px 24px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.08)}
+.section-label{font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;font-size:13px;color:rgba(255,255,255,0.65)}
+.s-input{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:7px;padding:6px 9px;font-size:12px;width:160px}
+.s-input option{background:#1a1a1e}
+input[type=color]{width:38px;height:30px;border:none;background:none;cursor:pointer;border-radius:6px}
+
+.toggle{width:40px;height:22px;background:rgba(255,255,255,0.15);border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:#FF1744}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s}
+.toggle.on::after{left:21px}
+
+.msg-row{background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 11px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.06)}
+.msg-row-top{display:grid;grid-template-columns:22px 85px 80px 1fr 30px;gap:6px;align-items:center;margin-bottom:6px}
+.msg-num{font-size:11px;color:rgba(255,255,255,0.3);font-weight:700}
+select{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:7px;padding:5px 8px;font-size:11px;width:100%}
+select option{background:#1a1a1e}
+.msg-text-input{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:7px;padding:5px 8px;font-size:11px;width:100%}
+.msg-text-input::placeholder{color:rgba(255,255,255,0.25)}
+.del-btn{background:rgba(255,50,50,0.1);border:none;color:rgba(255,100,100,0.6);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:12px}
+.del-btn:hover{background:rgba(255,50,50,0.25)}
+
+.img-btn{background:rgba(255,255,255,0.07);border:1px dashed rgba(255,255,255,0.2);color:rgba(255,255,255,0.5);border-radius:7px;padding:6px 12px;font-size:11px;cursor:pointer;margin-top:5px;display:inline-block}
+.img-preview-wrap{position:relative;display:inline-block;margin-top:6px}
+.img-preview-wrap img{width:70px;height:60px;border-radius:7px;object-fit:cover;display:block}
+.img-remove{position:absolute;top:-6px;right:-6px;background:#FF1744;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+.add-btns{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.btn-sec{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.75);border-radius:9px;padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-sec:hover{background:rgba(255,255,255,0.12)}
+.btn-red{color:rgba(255,100,100,0.8);border-color:rgba(255,80,80,0.2)}
+
+.right-panel{display:flex;flex-direction:column;background:#111114}
+.preview-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:14px;font-weight:600;color:rgba(255,255,255,0.7)}
+.preview-hint{font-size:12px;color:rgba(255,255,255,0.3);font-weight:400}
+.preview-area{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.dl-bar{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.08)}
+.btn-dl{width:100%;background:linear-gradient(135deg,#FF6B9D,#C850C0);border:none;color:#fff;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
+.btn-dl:hover{opacity:.9}
+
+#capture-root{display:inline-block}
+#app-screen{
+  width:390px;
+  background:linear-gradient(135deg,#FF6B9D,#C850C0,#9B51E0);
+  display:flex;
+  flex-direction:column;
+  min-height:700px;
+  overflow:hidden;
+}
+
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px}
+.app-logo-wrap{display:flex;align-items:center;gap:6px}
+.app-logo-t{font-size:32px;font-weight:900;font-style:italic;color:#fff;letter-spacing:3px}
+.app-logo-b{background:#fff;color:#C850C0;font-size:12px;font-weight:900;padding:3px 8px;border-radius:6px}
+.app-menu-icon{font-size:24px;color:#fff;opacity:.85;width:36px;text-align:center}
+.app-refresh-icon{font-size:18px;color:rgba(255,255,255,0.6);width:36px;text-align:center}
+
+.chat-nav{display:flex;align-items:center;padding:8px 16px 10px;gap:10px;border-bottom:1px solid rgba(255,255,255,0.15)}
+.back-btn{font-size:26px;color:#fff;opacity:.9;line-height:1}
+.chat-avatar{width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.chat-info{flex:1}
+.chat-name{font-size:15px;font-weight:800;color:#fff}
+.chat-desc{font-size:11px;color:rgba(255,255,255,0.6)}
+
+.msgs-area{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.msg-row-r,.msg-row-l{display:flex;align-items:flex-end;gap:6px}
+.msg-row-r{justify-content:flex-end}
+.av-sm{width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;align-self:flex-end}
+
+.bbl{border-radius:18px;padding:9px 13px;max-width:78%}
+.bbl-r{border-bottom-right-radius:4px}
+.bbl-l{background:rgba(255,255,255,0.2);border-bottom-left-radius:4px}
+.bbl-txt{font-size:14px;color:#fff;line-height:1.4}
+.bbl-time{font-size:10px;color:rgba(255,255,255,0.5);margin-top:3px}
+.bbl-read{font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px;text-align:right}
+
+/* Improved image bubble */
+.img-bbl{border-radius:16px;overflow:hidden;max-width:220px;position:relative}
+.img-bbl img{width:220px;max-height:280px;display:block;border-radius:16px;object-fit:cover;image-rendering:auto}
+.img-bbl-time{font-size:10px;color:rgba(255,255,255,0.7);margin-top:4px;padding:0 2px;text-shadow:0 1px 3px rgba(0,0,0,0.4)}
+
+.input-bar{display:flex;align-items:center;gap:8px;padding:10px 14px 16px;background:rgba(0,0,0,0.2);border-top:1px solid rgba(255,255,255,0.1)}
+.img-icon-btn{width:36px;height:36px;background:rgba(255,255,255,0.18);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.input-fake{flex:1;background:rgba(255,255,255,0.18);border-radius:22px;padding:10px 16px;font-size:13px;color:rgba(255,255,255,0.45)}
+.send-btn{width:36px;height:36px;background:#FF1744;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">
+    <span class="logo-text">TELR</span>
+    <span class="logo-badge">AI</span>
+  </div>
+  <span class="topbar-hint">Chat Screenshot Generator</span>
+</div>
+<div class="main">
+  <div class="left-panel">
+    <p class="section-label">Tester</p>
+    <div class="setting-row">
+      <span>Name</span>
+      <input class="s-input" id="s-name" value="Emily" oninput="render()">
+    </div>
+    <div class="setting-row">
+      <span>Description</span>
+      <input class="s-input" id="s-desc" value="Subtle Flirt Specialist" oninput="render()">
+    </div>
+    <div class="setting-row">
+      <span>Emoji</span>
+      <input class="s-input" id="s-emoji" value="🌸" oninput="render()" style="width:70px">
+    </div>
+    <div class="setting-row">
+      <span>Avatar colour</span>
+      <input type="color" id="s-avatar" value="#FF6B9D" onchange="render()">
+    </div>
+    <div class="setting-row">
+      <span>Bubble colour</span>
+      <input type="color" id="s-bubble" value="#FF1744" onchange="render()">
+    </div>
+    <div class="setting-row">
+      <span>Show timestamps</span>
+      <div class="toggle on" id="tog-time" onclick="togTime()"></div>
+    </div>
+    <div class="setting-row">
+      <span>Show read</span>
+      <div class="toggle" id="tog-read" onclick="togRead()"></div>
+    </div>
+    <p class="section-label" style="margin-top:24px">Messages</p>
+    <div id="msg-list"></div>
+    <div class="add-btns">
+      <button class="btn-sec" onclick="addMsg('left')">+ Add left</button>
+      <button class="btn-sec" onclick="addMsg('right')">+ Add right</button>
+      <button class="btn-sec btn-red" onclick="clearMsgs()">✕ Clear</button>
+    </div>
+  </div>
+  <div class="right-panel">
+    <div class="preview-header">
+      <span>Preview</span>
+      <span class="preview-hint">390px wide</span>
+    </div>
+    <div class="preview-area">
+      <div id="capture-root">
+        <div id="app-screen"></div>
+      </div>
+    </div>
+    <div class="dl-bar">
+      <button class="btn-dl" onclick="downloadShot()">⬇ Download PNG</button>
+    </div>
+  </div>
+</div>
+<div id="loading" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+  <div style="width:38px;height:38px;border:3px solid rgba(255,255,255,0.2);border-top-color:#FF6B9D;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <p style="font-size:14px;color:rgba(255,255,255,0.7)">Generating...</p>
+</div>
+<input type="file" id="file-in" accept="image/*" style="display:none" onchange="handleFile(event)">
+
+<script>
+let messages = [
+  {side:'right', type:'text', text:'hey you seem really interesting 👀', time:'6:59 AM', img:null},
+  {side:'right', type:'text', text:'what makes you say that', time:'6:59 AM', img:null},
+  {side:'left',  type:'text', text:'just a vibe honestly 😏', time:'7:01 AM', img:null},
+  {side:'right', type:'text', text:'you got a girlfriend?', time:'7:02 AM', img:null},
+  {side:'left',  type:'text', text:'why you asking 👀', time:'7:02 AM', img:null},
+  {side:'right', type:'text', text:'just curious... no reason', time:'7:03 AM', img:null},
+];
+
+let showTime = true;
+let showRead = false;
+let fileTargetIdx = -1;
+
+function togTime(){
+  showTime = !showTime;
+  document.getElementById('tog-time').classList.toggle('on', showTime);
+  render();
+}
+function togRead(){
+  showRead = !showRead;
+  document.getElementById('tog-read').classList.toggle('on', showRead);
+  render();
+}
+
+function getS(){
+  return {
+    name: document.getElementById('s-name').value || 'Emily',
+    desc: document.getElementById('s-desc').value || 'Subtle Flirt Specialist',
+    emoji: document.getElementById('s-emoji').value || '🌸',
+    avatarColor: document.getElementById('s-avatar').value,
+    bubbleColor: document.getElementById('s-bubble').value,
+  };
+}
+
+function renderMsgList(){
+  const list = document.getElementById('msg-list');
+  list.innerHTML = '';
+  messages.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'msg-row';
+
+    const imgSection = m.img
+      ? `<div class="img-preview-wrap">
+           <img src="${m.img}" alt="">
+           <button class="img-remove" onclick="removeImg(${i})">✕</button>
+         </div>`
+      : `<button class="img-btn" onclick="pickImg(${i})">+ Add image</button>`;
+
+    row.innerHTML = `
+      <div class="msg-row-top">
+        <span class="msg-num">${i+1}</span>
+        <select onchange="messages[${i}].side=this.value;render()">
+          <option value="right" ${m.side==='right'?'selected':''}>Right</option>
+          <option value="left"  ${m.side==='left'?'selected':''}>Left</option>
+        </select>
+        <select onchange="messages[${i}].type=this.value;renderMsgList();render()">
+          <option value="text"  ${m.type==='text'?'selected':''}>Text</option>
+          <option value="image" ${m.type==='image'?'selected':''}>Image</option>
+        </select>
+        <input class="msg-text-input"
+          value="${m.text.replace(/"/g,'&quot;')}"
+          oninput="messages[${i}].text=this.value;render()"
+          ${m.type==='image'?'disabled style="opacity:.3"':''}
+          placeholder="Message...">
+        <button class="del-btn" onclick="messages.splice(${i},1);renderMsgList();render()">✕</button>
+      </div>
+      ${m.type==='image' ? imgSection : ''}
+      <input class="msg-text-input"
+        value="${m.time}"
+        oninput="messages[${i}].time=this.value;render()"
+        placeholder="Time e.g. 9:41 AM"
+        style="width:130px;margin-top:5px;font-size:10px">
+    `;
+    list.appendChild(row);
+  });
+}
+
+function addMsg(side){
+  messages.push({side, type:'text', text:side==='right'?'hey...':'lol okay', time:'9:41 AM', img:null});
+  renderMsgList(); render();
+}
+function clearMsgs(){
+  messages = []; renderMsgList(); render();
+}
+function pickImg(idx){
+  fileTargetIdx = idx;
+  document.getElementById('file-in').click();
+}
+function removeImg(idx){
+  messages[idx].img = null;
+  messages[idx].type = 'text';
+  renderMsgList(); render();
+}
+function handleFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    messages[fileTargetIdx].img = ev.target.result;
+    messages[fileTargetIdx].type = 'image';
+    renderMsgList(); render();
+    e.target.value = '';
+    fileTargetIdx = -1;
+  };
+  reader.readAsDataURL(file);
+}
+
+function render(){
+  const s = getS();
+  const screen = document.getElementById('app-screen');
+  screen.innerHTML = '';
+
+  // Header — logo only, no tabs
+  const hdr = document.createElement('div');
+  hdr.className = 'app-header';
+  hdr.innerHTML = `
+    <span class="app-menu-icon">☰</span>
+    <div class="app-logo-wrap">
+      <span class="app-logo-t">TELR</span>
+      <span class="app-logo-b">AI</span>
+    </div>
+    <span class="app-refresh-icon">↺</span>
+  `;
+  screen.appendChild(hdr);
+
+  // Chat nav — directly under header, no tabs in between
+  const nav = document.createElement('div');
+  nav.className = 'chat-nav';
+  nav.innerHTML = `
+    <span class="back-btn">‹</span>
+    <div class="chat-avatar" style="background:${s.avatarColor}33">${s.emoji}</div>
+    <div class="chat-info">
+      <div class="chat-name">${s.name}</div>
+      <div class="chat-desc">${s.desc}</div>
+    </div>
+  `;
+  screen.appendChild(nav);
+
+  const msgsEl = document.createElement('div');
+  msgsEl.className = 'msgs-area';
+
+  messages.forEach(m => {
+    const row = document.createElement('div');
+    row.className = m.side === 'right' ? 'msg-row-r' : 'msg-row-l';
+
+    if(m.side === 'left'){
+      const av = document.createElement('div');
+      av.className = 'av-sm';
+      av.style.background = s.avatarColor + '33';
+      av.textContent = s.emoji;
+      row.appendChild(av);
+    }
+
+    if(m.type === 'image' && m.img){
+      const wrap = document.createElement('div');
+      wrap.className = 'img-bbl';
+
+      // Improved: use a real <img> with full natural size capped by CSS
+      const img = new Image();
+      img.src = m.img;
+      img.style.cssText = 'width:220px;max-height:280px;display:block;border-radius:16px;object-fit:cover;';
+      wrap.appendChild(img);
+
+      if(showTime){
+        const t = document.createElement('div');
+        t.className = 'img-bbl-time';
+        t.textContent = m.time;
+        wrap.appendChild(t);
+      }
+      row.appendChild(wrap);
+
+    } else {
+      const bbl = document.createElement('div');
+      bbl.className = `bbl ${m.side==='right'?'bbl-r':'bbl-l'}`;
+      if(m.side === 'right') bbl.style.background = s.bubbleColor;
+
+      const txt = document.createElement('div');
+      txt.className = 'bbl-txt';
+      txt.textContent = m.text;
+      bbl.appendChild(txt);
+
+      if(showTime){
+        const t = document.createElement('div');
+        t.className = 'bbl-time';
+        t.textContent = m.time;
+        bbl.appendChild(t);
+      }
+      if(showRead && m.side === 'right'){
+        const r = document.createElement('div');
+        r.className = 'bbl-read';
+        r.textContent = 'Read';
+        bbl.appendChild(r);
+      }
+      row.appendChild(bbl);
+    }
+
+    msgsEl.appendChild(row);
+  });
+
+  screen.appendChild(msgsEl);
+
+  const bar = document.createElement('div');
+  bar.className = 'input-bar';
+  bar.innerHTML = `
+    <div class="img-icon-btn">🖼</div>
+    <div class="input-fake">Message ${s.name}...</div>
+    <div class="send-btn">➤</div>
+  `;
+  screen.appendChild(bar);
+}
+
+function downloadShot(){
+  const loading = document.getElementById('loading');
+  loading.style.display = 'flex';
+  const root = document.getElementById('capture-root');
+
+  // Wait for all images inside the preview to fully load before capturing
+  const imgs = root.querySelectorAll('img');
+  const loads = Array.from(imgs).map(img =>
+    img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })
+  );
+
+  Promise.all(loads).then(() => {
+    html2canvas(root, {
+      scale: 3,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      logging: false,
+      imageTimeout: 15000,
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'telr-ai-chat.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      loading.style.display = 'none';
+    }).catch(() => {
+      loading.style.display = 'none';
+      alert('Download failed. Try Chrome.');
+    });
+  });
+}
+
+renderMsgList();
+render();
+</script>
+</body>
+</html>
